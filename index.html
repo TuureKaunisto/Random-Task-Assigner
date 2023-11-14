@@ -38,6 +38,10 @@
             <button onclick="selectParticipants()">Select random participants</button>
         </div>
     </main>
+    <section>
+        <p>Results:</p>
+        <textarea id="result-text" placeholder="Results in text format" rows="5"></textarea>
+    </section>
 
     <script>
         function domLoaded() {
@@ -95,7 +99,8 @@
         }
 
         function selectParticipants() {
-            const selectedParticipants = []
+            const selectedParticipants = [];
+            const results = [];
             document.querySelectorAll('#tasks div span').forEach(result => result.remove());
             document.querySelectorAll('#tasks input').forEach(taskInput => {
                 if (!taskInput.value) {
@@ -106,6 +111,14 @@
                 result.textContent = getRandomParticipant(selectedParticipants)
                 selectedParticipants.push(result.textContent)
                 taskInput.insertAdjacentElement('afterend', result)
+                results.push({
+                    task: taskInput.value,
+                    participant: result.textContent
+                })
+
+                document.querySelector('#result-text').value = results
+                    .map(result => `${result.task}: @${result.participant}`)
+                    .join('\n');
             });
         }
 
