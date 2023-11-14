@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Task Assigner</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        main {
+            display: flex;
+        }
+
+        .input-list {
+            max-width: 200px;
+        }
+        .input-list input {
+            width: 100%;
+            padding: 6px 6px;
+            margin-bottom: 10px;
+        }
+    </style>
+  </head>
+  <body>
+    <header>
+        <h1>Random Task Assigner</h1>
+    </header>
+    <main>
+        <div class="left-column">
+            <h2>Participants</h2>
+            <div class="input-list" id="participants"></div>
+        </div>
+        <div class="results">
+            <h2>Tasks</h2>
+            <div class="input-list" id="tasks"></div>
+            <button onclick="selectParticipants()">Select random participants</button>
+        </div>
+    </main>
+
+    <script>
+        function domLoaded() {
+            addInput(document.querySelector('#participants'), '', 'Name of participant');
+            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
+                .forEach(day => addInput(document.querySelector('#tasks'), day, 'Name of task', true));
+        }
+
+        function addInput(parent, value = '', placeholder = '', isTask = false) {
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.value = value;
+            newInput.placeholder = placeholder;
+            newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent));
+            newInput.addEventListener('blur', removeEmptyInputs.bind(null, parent));
+            let newElement = document.createElement('div');
+            newElement.appendChild(newInput)
+            parent.appendChild(newElement);
+        }
+
+        function ensureEmptyInputAtTheEnd(parent) {
+            const lastInput = parent.querySelector('div:last-of-type > input');
+            if (lastInput.value.length > 0) {
+                addInput(parent);
+            }
+        }
+
+        function removeEmptyInputs(parent) {
+            [...parent.querySelectorAll('input')].slice(0, -1).forEach(input => {
+                if (input.value === '') {
+                    input.remove();
+                }
+            })
+        }
+
+        function getRandomParticipant(selectedParticipants) {
+            const participants = [...document.querySelectorAll('#participants input')]
+                .map(input => input.value)
+                .filter(input => Boolean(input));
+            
+            // count how many times each participant has been selected
+            const selectedCounts = Object.fromEntries(participants.map((participant) => [participant, 0]));
+            selectedParticipants.forEach(participant => selectedCounts[participant] = (selectedCounts[participant] ?? 0) + 1);
+            // make a list of participants that have been selected the least
+            const smallestSelectedCount = Math.min(...Object.values(selectedCounts));
+            const leastSelectedParticipants = Object.entries(selectedCounts)
+                .filter(([key, value]) => value === smallestSelectedCount)
+                .map(([key, value]) => key);
+            console.log(leastSelectedParticipants);
+
+            const selectedIndex = leastSelectedParticipants.length === 1
+                ? 0
+                : Math.floor(Math.random() * leastSelectedParticipants.length)
+            return leastSelectedParticipants[selectedIndex];
+        }
+
+        function selectParticipants() {
+            const selectedParticipants = []
+            document.querySelectorAll('#tasks div span').forEach(result => result.remove());
+            document.querySelectorAll('#tasks input').forEach(taskInput => {
+                if (!taskInput.value) {
+                    return
+                }
+                console.log('Selecting for', taskInput.value)
+                const result = document.createElement('span');
+                result.textContent = getRandomParticipant(selectedParticipants)
+                selectedParticipants.push(result.textContent)
+                taskInput.insertAdjacentElement('afterend', result)
+            });
+        }
+
+        addEventListener('DOMContentLoaded', domLoaded);
+    </script>
+  </body>
+</html>
