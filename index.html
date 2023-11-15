@@ -45,6 +45,11 @@
             <div class="input-list" id="tasks"></div>
             <button onclick="selectParticipants()">Select random participants</button>
         </div>
+        <dialog id="availability-dialog">
+            <h3>Availability for <span id="availability-participant"></span></h3>
+            <div id="availability-tasks"></div>
+            <button id="close-availability">Close</button>
+        </dialog>
     </main>
     <section>
         <p>Results:</p>
@@ -56,6 +61,7 @@
             addInput(document.querySelector('#participants'), '', 'Name of participant');
             ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
                 .forEach(day => addInput(document.querySelector('#tasks'), day, 'Name of task', true));
+            document.querySelector('#close-availability').addEventListener('click', () => document.querySelector('#availability-dialog').close())
         }
 
         function addInput(parent, value = '', placeholder = '', isTask = false) {
@@ -64,15 +70,45 @@
             newInput.value = value;
             newInput.placeholder = placeholder;
             newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent, placeholder));
+
             const newElement = document.createElement('div');
             newElement.className = 'input-element';
+
+            const availabilityButton = document.createElement('button');
+            availabilityButton.textContent = 'Tasks';
+            availabilityButton.addEventListener('click', () => showAvailabilityFor(newInput.value));
+
             const closeButton = document.createElement('button');
             closeButton.textContent = 'x';
             closeButton.addEventListener('click', () => newElement.remove());
 
-            newElement.appendChild(newInput)
-            newElement.appendChild(closeButton)
+            newElement.appendChild(newInput);
+            if (!isTask) {
+                newElement.appendChild(availabilityButton);
+            }
+            newElement.appendChild(closeButton);
             parent.appendChild(newElement);
+        }
+
+        function showAvailabilityFor(participant) {
+            const dialog = document.querySelector('#availability-dialog');
+            document.querySelector('#availability-participant').textContent = participant;
+            const taskContainer = document.querySelector('#availability-tasks');
+            taskContainer.replaceChildren()
+
+            document.querySelectorAll('#tasks input').forEach(taskInput => {
+                if (!taskInput.value) {
+                    return
+                }
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(taskInput.value));
+                taskContainer.appendChild(label);
+            });
+            dialog.showModal();
         }
 
         function ensureEmptyInputAtTheEnd(parent, placeholder) {
@@ -86,7 +122,7 @@
             const participants = [...document.querySelectorAll('#participants input')]
                 .map(input => input.value)
                 .filter(input => Boolean(input));
-            
+
             // count how many times each participant has been selected
             const selectedCounts = Object.fromEntries(participants.map((participant) => [participant, 0]));
             selectedParticipants.forEach(participant => selectedCounts[participant] = (selectedCounts[participant] ?? 0) + 1);
