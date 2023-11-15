@@ -11,6 +11,7 @@
 
         main {
             display: flex;
+            column-gap: 20px;
         }
 
         .input-list {
@@ -19,7 +20,14 @@
         .input-list input {
             width: 100%;
             padding: 6px 6px;
+        }
+        .input-element {
+            display: flex;
             margin-bottom: 10px;
+            column-gap: 3px;
+        }
+        .input-element:last-child button {
+            display: none;
         }
     </style>
   </head>
@@ -55,26 +63,23 @@
             newInput.type = 'text';
             newInput.value = value;
             newInput.placeholder = placeholder;
-            newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent));
-            newInput.addEventListener('blur', removeEmptyInputs.bind(null, parent));
-            let newElement = document.createElement('div');
+            newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent, placeholder));
+            const newElement = document.createElement('div');
+            newElement.className = 'input-element';
+            const closeButton = document.createElement('button');
+            closeButton.textContent = 'x';
+            closeButton.addEventListener('click', () => newElement.remove());
+
             newElement.appendChild(newInput)
+            newElement.appendChild(closeButton)
             parent.appendChild(newElement);
         }
 
-        function ensureEmptyInputAtTheEnd(parent) {
+        function ensureEmptyInputAtTheEnd(parent, placeholder) {
             const lastInput = parent.querySelector('div:last-of-type > input');
             if (lastInput.value.length > 0) {
-                addInput(parent);
+                addInput(parent, '' , placeholder);
             }
-        }
-
-        function removeEmptyInputs(parent) {
-            [...parent.querySelectorAll('input')].slice(0, -1).forEach(input => {
-                if (input.value === '') {
-                    input.remove();
-                }
-            })
         }
 
         function getRandomParticipant(selectedParticipants) {
@@ -101,20 +106,21 @@
         function selectParticipants() {
             const selectedParticipants = [];
             const results = [];
-            document.querySelectorAll('#tasks div span').forEach(result => result.remove());
+            document.querySelectorAll('#tasks .participant').forEach(result => result.remove());
             document.querySelectorAll('#tasks input').forEach(taskInput => {
                 if (!taskInput.value) {
                     return
                 }
                 console.log('Selecting for', taskInput.value)
                 const result = document.createElement('span');
-                result.textContent = getRandomParticipant(selectedParticipants)
-                selectedParticipants.push(result.textContent)
-                taskInput.insertAdjacentElement('afterend', result)
+                result.className = 'participant';
+                result.textContent = getRandomParticipant(selectedParticipants);
+                selectedParticipants.push(result.textContent);
+                taskInput.parentNode.appendChild(result);
                 results.push({
                     task: taskInput.value,
                     participant: result.textContent
-                })
+                });
 
                 document.querySelector('#result-text').value = results
                     .map(result => `${result.task}: @${result.participant}`)
