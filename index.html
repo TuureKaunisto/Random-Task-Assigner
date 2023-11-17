@@ -57,6 +57,7 @@
     </section>
 
     <script>
+        const available = {};
         function domLoaded() {
             addInput(document.querySelector('#participants'), '', 'Name of participant');
             ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
@@ -69,6 +70,7 @@
             newInput.type = 'text';
             newInput.value = value;
             newInput.placeholder = placeholder;
+            newInput.dataset.id = crypto.randomUUID();
             newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent, placeholder));
 
             const newElement = document.createElement('div');
@@ -76,7 +78,7 @@
 
             const availabilityButton = document.createElement('button');
             availabilityButton.textContent = 'Tasks';
-            availabilityButton.addEventListener('click', () => showAvailabilityFor(newInput.value));
+            availabilityButton.addEventListener('click', () => showAvailabilityFor(newInput));
 
             const closeButton = document.createElement('button');
             closeButton.textContent = 'x';
@@ -90,11 +92,21 @@
             parent.appendChild(newElement);
         }
 
-        function showAvailabilityFor(participant) {
+        function setAvailability(taskId, participantId, isAvailable) {
+            available[taskId] = available[taskId] ?? {};
+            available[taskId][participantId] = isAvailable;
+        }
+
+        function getAvailability(taskId, participantId) {
+            return available?.[taskId]?.[participantId] !== false
+        }
+
+        function showAvailabilityFor(participantInput) {
+            const participant = participantInput.value;
             const dialog = document.querySelector('#availability-dialog');
             document.querySelector('#availability-participant').textContent = participant;
             const taskContainer = document.querySelector('#availability-tasks');
-            taskContainer.replaceChildren()
+            taskContainer.replaceChildren();
 
             document.querySelectorAll('#tasks input').forEach(taskInput => {
                 if (!taskInput.value) {
@@ -104,6 +116,7 @@
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.checked = true;
+                checkbox.addEventListener('change', (event) => setAvailability(taskInput.dataset.id, participantInput.dataset.id, event.target.checked));
                 label.appendChild(checkbox);
                 label.appendChild(document.createTextNode(taskInput.value));
                 taskContainer.appendChild(label);
@@ -118,8 +131,9 @@
             }
         }
 
-        function getRandomParticipant(selectedParticipants) {
+        function getRandomParticipant(selectedParticipants, taskId) {
             const participants = [...document.querySelectorAll('#participants input')]
+                .filter(input => getAvailability(taskId, input.dataset.id))
                 .map(input => input.value)
                 .filter(input => Boolean(input));
 
@@ -150,7 +164,7 @@
                 console.log('Selecting for', taskInput.value)
                 const result = document.createElement('span');
                 result.className = 'participant';
-                result.textContent = getRandomParticipant(selectedParticipants);
+                result.textContent = getRandomParticipant(selectedParticipants, taskInput.dataset.id);
                 selectedParticipants.push(result.textContent);
                 taskInput.parentNode.appendChild(result);
                 results.push({
