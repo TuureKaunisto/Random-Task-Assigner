@@ -29,6 +29,13 @@
         .input-element:last-child button {
             display: none;
         }
+
+        #availability-dialog {
+            padding: 0;
+        }
+        .dialog-content {
+            padding: 20px;
+        }
     </style>
   </head>
   <body>
@@ -46,9 +53,11 @@
             <button onclick="selectParticipants()">Select random participants</button>
         </div>
         <dialog id="availability-dialog">
-            <h3>Availability for <span id="availability-participant"></span></h3>
-            <div id="availability-tasks"></div>
-            <button id="close-availability">Close</button>
+            <div class="dialog-content">
+                <h3>Availability for <span id="availability-participant"></span></h3>
+                <div id="availability-tasks"></div>
+                <button id="close-availability">Close</button>
+            </div>
         </dialog>
     </main>
     <section>
@@ -62,7 +71,13 @@
             addInput(document.querySelector('#participants'), '', 'Name of participant');
             ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
                 .forEach(day => addInput(document.querySelector('#tasks'), day, 'Name of task', true));
-            document.querySelector('#close-availability').addEventListener('click', () => document.querySelector('#availability-dialog').close())
+            const availabilityDialog = document.querySelector('#availability-dialog');
+            document.querySelector('#close-availability').addEventListener('click', () => availabilityDialog.close());
+            document.querySelector('#availability-dialog').addEventListener('click', event => {
+                if (event.target === availabilityDialog) {
+                    availabilityDialog.close()
+                }
+            });
         }
 
         function addInput(parent, value = '', placeholder = '', isTask = false) {
@@ -101,6 +116,10 @@
             return available?.[taskId]?.[participantId] !== false
         }
 
+        function getParticipantName(participantId) {
+            return document.querySelector(`#participants input[data-id="${participantId}"]`)?.value ?? 'Not found'
+        }
+
         function showAvailabilityFor(participantInput) {
             const participant = participantInput.value;
             const dialog = document.querySelector('#availability-dialog');
@@ -115,7 +134,7 @@
                 const label = document.createElement('label');
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
-                checkbox.checked = true;
+                checkbox.checked = getAvailability(taskInput.dataset.id, participantInput.dataset.id);
                 checkbox.addEventListener('change', (event) => setAvailability(taskInput.dataset.id, participantInput.dataset.id, event.target.checked));
                 label.appendChild(checkbox);
                 label.appendChild(document.createTextNode(taskInput.value));
@@ -132,14 +151,16 @@
         }
 
         function getRandomParticipant(selectedParticipants, taskId) {
-            const participants = [...document.querySelectorAll('#participants input')]
-                .filter(input => getAvailability(taskId, input.dataset.id))
-                .map(input => input.value)
-                .filter(input => Boolean(input));
+            const participantIds = [...document.querySelectorAll('#participants input')]
+                .filter(input => Boolean(input.value))
+                .map(input => input.dataset.id)
+                .filter(participantId => getAvailability(taskId, participantId));
 
             // count how many times each participant has been selected
-            const selectedCounts = Object.fromEntries(participants.map((participant) => [participant, 0]));
-            selectedParticipants.forEach(participant => selectedCounts[participant] = (selectedCounts[participant] ?? 0) + 1);
+            const selectedCounts = Object.fromEntries(participantIds.map((participantId) => [participantId, 0]));
+            selectedParticipants
+                .filter(participantId => getAvailability(taskId, participantId))
+                .forEach(participantId => selectedCounts[participantId] = (selectedCounts[participantId] ?? 0) + 1);
             // make a list of participants that have been selected the least
             const smallestSelectedCount = Math.min(...Object.values(selectedCounts));
             const leastSelectedParticipants = Object.entries(selectedCounts)
@@ -164,8 +185,9 @@
                 console.log('Selecting for', taskInput.value)
                 const result = document.createElement('span');
                 result.className = 'participant';
-                result.textContent = getRandomParticipant(selectedParticipants, taskInput.dataset.id);
-                selectedParticipants.push(result.textContent);
+                const selectedParticipantId = getRandomParticipant(selectedParticipants, taskInput.dataset.id);
+                result.textContent = getParticipantName(selectedParticipantId)
+                selectedParticipants.push(selectedParticipantId);
                 taskInput.parentNode.appendChild(result);
                 results.push({
                     task: taskInput.value,
