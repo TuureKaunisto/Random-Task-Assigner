@@ -5,17 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Random Task Assigner</title>
     <style>
+        :root {
+            --main-bg-color: #1c1c1c;
+            --field-bg-color: #3c3c3c;
+        }
         * {
             box-sizing: border-box;
+            font-family: Helvetica, Arial, sans-serif;
+            color: white;
+        }
+        body {
+            background: var(--main-bg-color);
         }
 
-        main {
-            display: flex;
-            column-gap: 20px;
+        h1 {
+            text-align: center;
+        }
+
+        @media (min-width: 500px) {
+            main {
+                max-width: 800px;
+                margin: auto;
+            }
+            .row {
+                display: flex;
+                column-gap: 20px;
+            }
+            .left-column, .right-column {
+                width: 50%;
+            }
         }
 
         .input-list {
-            max-width: 200px;
+            width: 100%;
         }
         .input-list input {
             width: 100%;
@@ -30,11 +52,55 @@
             display: none;
         }
 
+        dialog {
+            background: var(--field-bg-color);
+            border: none;
+            border-radius: 4px;
+        }
+        dialog::backdrop {
+            background: rgba(0,0,0,0.7);
+        }
         #availability-dialog {
             padding: 0;
         }
         .dialog-content {
             padding: 20px;
+        }
+
+        input[type=text], textarea {
+            border-radius: 4px;
+            border: none;
+            background: var(--field-bg-color);
+            padding: 10px;
+        }
+        input::placeholder, textarea::placeholder {
+            color: white;
+            opacity: 0.6;
+        }
+
+        button {
+            border-radius: 4px;
+            border: none;
+            color: white;
+            text-shadow: none;
+            background: var(--field-bg-color);
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn.main {
+            background: #005681;
+            color: white;
+            border: 0;
+            border-radius: 25px;
+            padding: 15px 10px;
+            min-width: 230px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        #result-text {
+            width: 100%;
         }
     </style>
   </head>
@@ -43,27 +109,31 @@
         <h1>Random Task Assigner</h1>
     </header>
     <main>
-        <div class="left-column">
-            <h2>Participants</h2>
-            <div class="input-list" id="participants"></div>
-        </div>
-        <div class="results">
-            <h2>Tasks</h2>
-            <div class="input-list" id="tasks"></div>
-            <button onclick="selectParticipants()">Select random participants</button>
-        </div>
-        <dialog id="availability-dialog">
-            <div class="dialog-content">
-                <h3>Availability for <span id="availability-participant"></span></h3>
-                <div id="availability-tasks"></div>
-                <button id="close-availability">Close</button>
+        <div class="row">
+            <div class="left-column">
+                <h2>Participants</h2>
+                <div class="input-list" id="participants"></div>
             </div>
-        </dialog>
+            <div class="right-column">
+                <h2>Tasks</h2>
+                <div class="input-list" id="tasks"></div>
+                <button onclick="selectParticipants()" class="btn main">Select random participants</button>
+            </div>
+        </div>
+
+        <section>
+            <p>Results:</p>
+            <textarea id="result-text" placeholder="Results in text format" rows="6"></textarea>
+        </section>
     </main>
-    <section>
-        <p>Results:</p>
-        <textarea id="result-text" placeholder="Results in text format" rows="5"></textarea>
-    </section>
+
+    <dialog id="availability-dialog">
+        <div class="dialog-content">
+            <h3>Availability for <span id="availability-participant"></span></h3>
+            <div id="availability-tasks"></div>
+            <button id="close-availability" class="btn main">Close</button>
+        </div>
+    </dialog>
 
     <script>
         const available = {};
@@ -182,16 +252,12 @@
                 if (!taskInput.value) {
                     return
                 }
-                console.log('Selecting for', taskInput.value)
-                const result = document.createElement('span');
-                result.className = 'participant';
+                console.log('Selecting for', taskInput.value);
                 const selectedParticipantId = getRandomParticipant(selectedParticipants, taskInput.dataset.id);
-                result.textContent = getParticipantName(selectedParticipantId)
                 selectedParticipants.push(selectedParticipantId);
-                taskInput.parentNode.appendChild(result);
                 results.push({
                     task: taskInput.value,
-                    participant: result.textContent
+                    participant: getParticipantName(selectedParticipantId)
                 });
 
                 document.querySelector('#result-text').value = results
