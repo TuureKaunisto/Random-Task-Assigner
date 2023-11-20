@@ -117,7 +117,7 @@
             <div class="right-column">
                 <h2>Tasks</h2>
                 <div class="input-list" id="tasks"></div>
-                <button onclick="selectParticipants()" class="btn main">Select random participants</button>
+                <button id="select-participants" class="btn main">Select random participants</button>
             </div>
         </div>
 
@@ -136,6 +136,8 @@
     </dialog>
 
     <script>
+        (() => {
+        const storageKey = 'configuration'
         const available = {};
         function domLoaded() {
             addInput(document.querySelector('#participants'), '', 'Name of participant');
@@ -148,6 +150,7 @@
                     availabilityDialog.close()
                 }
             });
+            document.querySelector('#select-participants').addEventListener('click', selectParticipants);
         }
 
         function addInput(parent, value = '', placeholder = '', isTask = false) {
@@ -162,7 +165,7 @@
             newElement.className = 'input-element';
 
             const availabilityButton = document.createElement('button');
-            availabilityButton.textContent = 'Tasks';
+            availabilityButton.textContent = 'Settings';
             availabilityButton.addEventListener('click', () => showAvailabilityFor(newInput));
 
             const closeButton = document.createElement('button');
@@ -247,7 +250,6 @@
         function selectParticipants() {
             const selectedParticipants = [];
             const results = [];
-            document.querySelectorAll('#tasks .participant').forEach(result => result.remove());
             document.querySelectorAll('#tasks input').forEach(taskInput => {
                 if (!taskInput.value) {
                     return
@@ -264,9 +266,39 @@
                     .map(result => `${result.task}: @${result.participant}`)
                     .join('\n');
             });
+            saveConfigurationToLocalStorage();
+        }
+
+        function getAvailabilityConfig(participantId) {
+            return [...document.querySelectorAll('#tasks input')]
+                .slice(0, -1)
+                .map((taskInput, index) => getAvailability(taskInput.dataset.id, participantId) ? null : index)
+                .filter(notAvailableIndex => notAvailableIndex !== null)
+        }
+
+        function getConfiguration() {
+            const tasks = [...document.querySelectorAll('#tasks input')]
+                .slice(0, -1)
+                .map(taskInput => taskInput.value);
+            const participants = [...document.querySelectorAll('#participants input')]
+                .slice(0, -1)
+                .map(input => [input.value, ...getAvailabilityConfig(input.dataset.id)]);
+            return {
+                p: participants,
+                t: tasks
+            }
+        }
+
+        function saveConfigurationToLocalStorage() {
+            try {
+                window.localStorage.setItem(storageKey, JSON.stringify(getConfiguration()))
+            } catch (error) {
+                console.error(error)
+            }
         }
 
         addEventListener('DOMContentLoaded', domLoaded);
+        })()
     </script>
   </body>
 </html>
