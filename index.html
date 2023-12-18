@@ -136,10 +136,18 @@
     </dialog>
 
     <script>
+        var test;
         (() => {
         const storageKey = 'configuration'
         const available = {};
         function domLoaded() {
+            addInput(document.querySelector('#participants'), 'Joe');
+            addInput(document.querySelector('#participants'), 'Jane');
+            addInput(document.querySelector('#participants'), 'Jill');
+            addInput(document.querySelector('#participants'), 'Bill');
+            addInput(document.querySelector('#participants'), 'Chill');
+            addInput(document.querySelector('#participants'), 'Phil');
+
             addInput(document.querySelector('#participants'), '', 'Name of participant');
             ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
                 .forEach(day => addInput(document.querySelector('#tasks'), day, 'Name of task', true));
@@ -150,7 +158,9 @@
                     availabilityDialog.close()
                 }
             });
-            document.querySelector('#select-participants').addEventListener('click', selectParticipants);
+            document.querySelector('#select-participants').addEventListener('click', () => {
+                displaySelectedParticipants(selectParticipants());
+            });
         }
 
         function addInput(parent, value = '', placeholder = '', isTask = false) {
@@ -180,17 +190,32 @@
             parent.appendChild(newElement);
         }
 
+        function getTasks() {
+            return [...document.querySelectorAll('#tasks input')]
+                .filter(taskInput => taskInput.value)
+                .map(taskInput => ({
+                    id: taskInput.dataset.id,
+                    name: taskInput.value
+                }));
+        }
+
         function setAvailability(taskId, participantId, isAvailable) {
             available[taskId] = available[taskId] ?? {};
             available[taskId][participantId] = isAvailable;
         }
 
         function getAvailability(taskId, participantId) {
-            return available?.[taskId]?.[participantId] !== false
+            return available?.[taskId]?.[participantId] !== false;
+        }
+
+        function getAvailabilityCount(participantId) {
+            return getTasks().reduce((accumulator, task) => {
+                return getAvailability(task.id, participantId) ? accumulator + 1 : accumulator
+            }, 0);
         }
 
         function getParticipantName(participantId) {
-            return document.querySelector(`#participants input[data-id="${participantId}"]`)?.value ?? 'Not found'
+            return document.querySelector(`#participants input[data-id="${participantId}"]`)?.value ?? 'Not found';
         }
 
         function showAvailabilityFor(participantInput) {
@@ -227,10 +252,11 @@
             const participantIds = [...document.querySelectorAll('#participants input')]
                 .filter(input => Boolean(input.value))
                 .map(input => input.dataset.id)
+            const availableParticipantIds = participantIds
                 .filter(participantId => getAvailability(taskId, participantId));
 
             // count how many times each participant has been selected
-            const selectedCounts = Object.fromEntries(participantIds.map((participantId) => [participantId, 0]));
+            const selectedCounts = Object.fromEntries(availableParticipantIds.map((participantId) => [participantId, 0]));
             selectedParticipants
                 .filter(participantId => getAvailability(taskId, participantId))
                 .forEach(participantId => selectedCounts[participantId] = (selectedCounts[participantId] ?? 0) + 1);
@@ -239,34 +265,54 @@
             const leastSelectedParticipants = Object.entries(selectedCounts)
                 .filter(([key, value]) => value === smallestSelectedCount)
                 .map(([key, value]) => key);
-            console.log(leastSelectedParticipants);
 
-            const selectedIndex = leastSelectedParticipants.length === 1
+            const participantPool = leastSelectedParticipants
+                .map(participant => {
+                    const availabilityCount = getAvailabilityCount(participant);
+                    const desiredProbability = availabilityCount / participantIds.length;
+                    const unmodifiedProbability = Math.min(availabilityCount / leastSelectedParticipants.length, 1);
+                    //console.log(getParticipantName(participant), availabilityCount, leastSelectedParticipants.length, 'desired', desiredProbability, 'unmodified', unmodifiedProbability, desiredProbability / unmodifiedProbability)
+                    return {
+                        id: participant,
+                        weight: desiredProbability / unmodifiedProbability
+                    }
+                })
+
+            const totalWeight = participantPool.reduce((accumulator, participant) => accumulator + participant.weight, 0);
+
+            //console.log(participantPool, totalWeight);
+
+            const randomWeight = leastSelectedParticipants.length === 1
                 ? 0
-                : Math.floor(Math.random() * leastSelectedParticipants.length)
-            return leastSelectedParticipants[selectedIndex];
+                : Math.random() * totalWeight;
+
+            var cumulativeWeight = 0;
+            for (participant of participantPool) {
+                cumulativeWeight += participant.weight;
+                if (cumulativeWeight > randomWeight) {
+                    return participant.id
+                }
+            }
         }
 
         function selectParticipants() {
             const selectedParticipants = [];
             const results = [];
-            document.querySelectorAll('#tasks input').forEach(taskInput => {
-                if (!taskInput.value) {
-                    return
-                }
-                console.log('Selecting for', taskInput.value);
-                const selectedParticipantId = getRandomParticipant(selectedParticipants, taskInput.dataset.id);
+            getTasks().forEach(task => {
+                const selectedParticipantId = getRandomParticipant(selectedParticipants, task.id);
                 selectedParticipants.push(selectedParticipantId);
                 results.push({
-                    task: taskInput.value,
+                    task: task.name,
                     participant: getParticipantName(selectedParticipantId)
                 });
-
-                document.querySelector('#result-text').value = results
-                    .map(result => `${result.task}: @${result.participant}`)
-                    .join('\n');
             });
-            saveConfigurationToLocalStorage();
+            return results;
+        }
+
+        function displaySelectedParticipants(results) {
+            document.querySelector('#result-text').value = results
+                .map(result => `${result.task}: @${result.participant}`)
+                .join('\n');
         }
 
         function getAvailabilityConfig(participantId) {
@@ -293,8 +339,38 @@
             try {
                 window.localStorage.setItem(storageKey, JSON.stringify(getConfiguration()))
             } catch (error) {
-                console.error(error)
+                console.error(error);
             }
+        }
+
+        function loadConfiguration() {
+            try {
+                window.localStorage.gettItem(storageKey);
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        test = function() {
+            const participationCount = {};
+            const countByTask = {}
+            const iterations = 20000
+            for (var i = 0; i < iterations; i++) {
+                const tasks = selectParticipants();
+                tasks.forEach(task => {
+                    participationCount[task.participant] = participationCount[task.participant] ?? 0;
+                    participationCount[task.participant]++;
+
+                    countByTask[task.task] = countByTask[task.task] ?? {};
+                    countByTask[task.task][task.participant] = countByTask[task.task][task.participant] ?? 0;
+                    countByTask[task.task][task.participant]++;
+                })
+            }
+            console.log(Object.entries(participationCount).map(([participant, timesParticipated]) => ({
+                participant,
+                percentage: (timesParticipated / iterations) * 100
+            })));
+            console.log('Count by task', countByTask);
         }
 
         addEventListener('DOMContentLoaded', domLoaded);
