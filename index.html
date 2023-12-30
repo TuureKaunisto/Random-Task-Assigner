@@ -266,15 +266,18 @@
                 .filter(([key, value]) => value === smallestSelectedCount)
                 .map(([key, value]) => key);
 
+            /*const totalAvailabilityCount = participantIds
+                .reduce((previousValue, participantId) => previousValue + getAvailabilityCount(participantId), 0)*/
             const participantPool = leastSelectedParticipants
                 .map(participant => {
                     const availabilityCount = getAvailabilityCount(participant);
-                    const desiredProbability = availabilityCount / participantIds.length;
-                    const unmodifiedProbability = Math.min(availabilityCount / leastSelectedParticipants.length, 1);
-                    //console.log(getParticipantName(participant), availabilityCount, leastSelectedParticipants.length, 'desired', desiredProbability, 'unmodified', unmodifiedProbability, desiredProbability / unmodifiedProbability)
+                    const desiredProbability = 1 / participantIds.length;
+                    const desiredOverallProbability = availabilityCount / participantIds.length;
+                    const unmodifiedProbability = 1 / leastSelectedParticipants.length; //Math.min(availabilityCount / leastSelectedParticipants.length, 1);
+                    console.log(getParticipantName(participant), 'available', availabilityCount, 'participants', leastSelectedParticipants.length, 'desired', desiredProbability, '/', desiredOverallProbability, 'unmodified', unmodifiedProbability, desiredProbability / desiredOverallProbability)
                     return {
                         id: participant,
-                        weight: desiredProbability / unmodifiedProbability
+                        weight: desiredProbability / desiredOverallProbability
                     }
                 })
 
