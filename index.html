@@ -248,62 +248,37 @@
             }
         }
 
-        function getRandomParticipant(selectedParticipants, taskId) {
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array
+        }
+
+        function getRandomRotation() {
             const participantIds = [...document.querySelectorAll('#participants input')]
                 .filter(input => Boolean(input.value))
-                .map(input => input.dataset.id)
-            const availableParticipantIds = participantIds
-                .filter(participantId => getAvailability(taskId, participantId));
-
-            // count how many times each participant has been selected
-            const selectedCounts = Object.fromEntries(availableParticipantIds.map((participantId) => [participantId, 0]));
-            selectedParticipants
-                .filter(participantId => getAvailability(taskId, participantId))
-                .forEach(participantId => selectedCounts[participantId] = (selectedCounts[participantId] ?? 0) + 1);
-            // make a list of participants that have been selected the least
-            const smallestSelectedCount = Math.min(...Object.values(selectedCounts));
-            const leastSelectedParticipants = Object.entries(selectedCounts)
-                .filter(([key, value]) => value === smallestSelectedCount)
-                .map(([key, value]) => key);
-
-            /*const totalAvailabilityCount = participantIds
-                .reduce((previousValue, participantId) => previousValue + getAvailabilityCount(participantId), 0)*/
-            const participantPool = leastSelectedParticipants
-                .map(participant => {
-                    const availabilityCount = getAvailabilityCount(participant);
-                    const desiredProbability = 1 / participantIds.length;
-                    const desiredOverallProbability = availabilityCount / participantIds.length;
-                    const unmodifiedProbability = 1 / leastSelectedParticipants.length; //Math.min(availabilityCount / leastSelectedParticipants.length, 1);
-                    console.log(getParticipantName(participant), 'available', availabilityCount, 'participants', leastSelectedParticipants.length, 'desired', desiredProbability, '/', desiredOverallProbability, 'unmodified', unmodifiedProbability, desiredProbability / desiredOverallProbability)
-                    return {
-                        id: participant,
-                        weight: desiredProbability / desiredOverallProbability
-                    }
-                })
-
-            const totalWeight = participantPool.reduce((accumulator, participant) => accumulator + participant.weight, 0);
-
-            //console.log(participantPool, totalWeight);
-
-            const randomWeight = leastSelectedParticipants.length === 1
-                ? 0
-                : Math.random() * totalWeight;
-
-            var cumulativeWeight = 0;
-            for (participant of participantPool) {
-                cumulativeWeight += participant.weight;
-                if (cumulativeWeight > randomWeight) {
-                    return participant.id
-                }
-            }
+                .map(input => input.dataset.id);
+            return shuffleArray(participantIds)
         }
 
         function selectParticipants() {
-            const selectedParticipants = [];
             const results = [];
-            getTasks().forEach(task => {
-                const selectedParticipantId = getRandomParticipant(selectedParticipants, task.id);
-                selectedParticipants.push(selectedParticipantId);
+            const participantRotation = getRandomRotation();
+            let rotationPointer = 0;
+            getTasks().forEach((task, index, tasks) => {
+                let selectedParticipantId;
+                // TODO: refactor this ugly while loop. Especially the very suboptimal exit condition
+                do {
+                    selectedParticipantId = participantRotation[rotationPointer % participantRotation.length];
+                    rotationPointer++;
+                } while (!getAvailability(task.id, selectedParticipantId) && rotationPointer <= tasks.length * participantRotation.length)
+                
+                if (!getAvailability(selectedParticipantId)) {
+                    selectedParticipantId = null;
+                }
+
                 results.push({
                     task: task.name,
                     participant: getParticipantName(selectedParticipantId)
