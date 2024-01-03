@@ -138,15 +138,15 @@
     <script>
         var test;
         (() => {
-        const storageKey = 'configuration'
+        const storageKey = 'configuration';
         const available = {};
         function domLoaded() {
-            addInput(document.querySelector('#participants'), 'Joe');
-            addInput(document.querySelector('#participants'), 'Jane');
-            addInput(document.querySelector('#participants'), 'Jill');
-            addInput(document.querySelector('#participants'), 'Bill');
-            addInput(document.querySelector('#participants'), 'Chill');
-            addInput(document.querySelector('#participants'), 'Phil');
+            addInput(document.querySelector('#participants'), 'Alice');
+            addInput(document.querySelector('#participants'), 'Bob');
+            addInput(document.querySelector('#participants'), 'Carol');
+            addInput(document.querySelector('#participants'), 'Dan');
+            addInput(document.querySelector('#participants'), 'Erin');
+            addInput(document.querySelector('#participants'), 'Frank');
 
             addInput(document.querySelector('#participants'), '', 'Name of participant');
             ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
@@ -155,7 +155,7 @@
             document.querySelector('#close-availability').addEventListener('click', () => availabilityDialog.close());
             document.querySelector('#availability-dialog').addEventListener('click', event => {
                 if (event.target === availabilityDialog) {
-                    availabilityDialog.close()
+                    availabilityDialog.close();
                 }
             });
             document.querySelector('#select-participants').addEventListener('click', () => {
@@ -208,12 +208,6 @@
             return available?.[taskId]?.[participantId] !== false;
         }
 
-        function getAvailabilityCount(participantId) {
-            return getTasks().reduce((accumulator, task) => {
-                return getAvailability(task.id, participantId) ? accumulator + 1 : accumulator
-            }, 0);
-        }
-
         function getParticipantName(participantId) {
             return document.querySelector(`#participants input[data-id="${participantId}"]`)?.value ?? 'Not found';
         }
@@ -253,31 +247,42 @@
                 const j = Math.floor(Math.random() * (i + 1));
                 [array[i], array[j]] = [array[j], array[i]];
             }
-            return array
+            return array;
         }
 
         function getRandomRotation() {
             const participantIds = [...document.querySelectorAll('#participants input')]
                 .filter(input => Boolean(input.value))
                 .map(input => input.dataset.id);
-            return shuffleArray(participantIds)
+            return shuffleArray(participantIds);
+        }
+
+        function countUnavailable(participantRotation, rotationPointer, task) {
+            let skip = 0;
+            const participantCount = participantRotation.length;
+            for (skip = 0; skip < participantCount; skip++) {
+                const participantId = participantRotation[(rotationPointer + skip) % participantCount];
+                if (getAvailability(task.id, participantId)) {
+                    return skip;
+                }
+            }
+            return 0;
         }
 
         function selectParticipants() {
             const results = [];
             const participantRotation = getRandomRotation();
+            const participantCount = participantRotation.length;
             let rotationPointer = 0;
             getTasks().forEach((task, index, tasks) => {
-                let selectedParticipantId;
-                // TODO: refactor this ugly while loop. Especially the very suboptimal exit condition
-                do {
-                    selectedParticipantId = participantRotation[rotationPointer % participantRotation.length];
-                    rotationPointer++;
-                } while (!getAvailability(task.id, selectedParticipantId) && rotationPointer <= tasks.length * participantRotation.length)
-                
-                if (!getAvailability(selectedParticipantId)) {
+                // skip participants that are not available for this task
+                const skip = countUnavailable(participantRotation, rotationPointer, task);
+                rotationPointer += skip;
+                let selectedParticipantId = participantRotation[rotationPointer % participantCount];
+                if (!getAvailability(task.id, selectedParticipantId)) {
                     selectedParticipantId = null;
                 }
+                rotationPointer++;
 
                 results.push({
                     task: task.name,
@@ -297,7 +302,7 @@
             return [...document.querySelectorAll('#tasks input')]
                 .slice(0, -1)
                 .map((taskInput, index) => getAvailability(taskInput.dataset.id, participantId) ? null : index)
-                .filter(notAvailableIndex => notAvailableIndex !== null)
+                .filter(notAvailableIndex => notAvailableIndex !== null);
         }
 
         function getConfiguration() {
@@ -315,7 +320,7 @@
 
         function saveConfigurationToLocalStorage() {
             try {
-                window.localStorage.setItem(storageKey, JSON.stringify(getConfiguration()))
+                window.localStorage.setItem(storageKey, JSON.stringify(getConfiguration()));
             } catch (error) {
                 console.error(error);
             }
@@ -331,9 +336,9 @@
 
         test = function() {
             const participationCount = {};
-            const countByTask = {}
-            const iterations = 20000
-            for (var i = 0; i < iterations; i++) {
+            const countByTask = {};
+            const iterations = 20000;
+            for (var i = 0; i <= iterations; i++) {
                 const tasks = selectParticipants();
                 tasks.forEach(task => {
                     participationCount[task.participant] = participationCount[task.participant] ?? 0;
