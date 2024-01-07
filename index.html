@@ -141,16 +141,9 @@
         const storageKey = 'configuration';
         const available = {};
         function domLoaded() {
-            addInput(document.querySelector('#participants'), 'Alice');
-            addInput(document.querySelector('#participants'), 'Bob');
-            addInput(document.querySelector('#participants'), 'Carol');
-            addInput(document.querySelector('#participants'), 'Dan');
-            addInput(document.querySelector('#participants'), 'Erin');
-            addInput(document.querySelector('#participants'), 'Frank');
+            setInitialTasks();
+            setInitialParticipants();
 
-            addInput(document.querySelector('#participants'), '', 'Name of participant');
-            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
-                .forEach(day => addInput(document.querySelector('#tasks'), day, 'Name of task', true));
             const availabilityDialog = document.querySelector('#availability-dialog');
             document.querySelector('#close-availability').addEventListener('click', () => availabilityDialog.close());
             document.querySelector('#availability-dialog').addEventListener('click', event => {
@@ -161,6 +154,33 @@
             document.querySelector('#select-participants').addEventListener('click', () => {
                 displaySelectedParticipants(selectParticipants());
             });
+        }
+
+        function setInitialTasks() {
+            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
+                .forEach(day => addInput(document.querySelector('#tasks'), day, 'Name of task', true));
+        }
+
+        function setInitialParticipants() {
+            if (location.hash) {
+                const urlParticipants = location.hash.replace(/^#/, '').split('/');
+                const tasks = getTasks();
+
+                urlParticipants.forEach(urlParticipant => {
+                    const [urlName, availabilityAsHex] = urlParticipant.split(';');
+                    const newInput = addInput(document.querySelector('#participants'));
+                    // assign name in an XSS safe manner ( https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html#guideline-3-use-documentcreateelement-elementsetattributevalue-elementappendchild-and-similar-to-build-dynamic-interfaces )
+                    newInput.value = decodeURIComponent(urlName);
+                    if (availabilityAsHex) {
+                        const bitmask = parseInt(availabilityAsHex, 16).toString(2).padStart(tasks.length, '0');
+                        tasks.forEach((task, index) => setAvailability(task.id, newInput.dataset.id, bitmask[index] !== '0'));
+                    }
+                });
+            } else {
+                ['Alice', 'Bob', 'Carol', 'Dan', 'Erin', 'Frank']
+                    .forEach(name => addInput(document.querySelector('#participants'), name));
+            }
+            addInput(document.querySelector('#participants'), '', 'Name of participant');
         }
 
         function addInput(parent, value = '', placeholder = '', isTask = false) {
@@ -188,6 +208,7 @@
             }
             newElement.appendChild(closeButton);
             parent.appendChild(newElement);
+            return newInput;
         }
 
         function getTasks() {
@@ -221,7 +242,7 @@
 
             document.querySelectorAll('#tasks input').forEach(taskInput => {
                 if (!taskInput.value) {
-                    return
+                    return;
                 }
                 const label = document.createElement('label');
                 const checkbox = document.createElement('input');
@@ -274,7 +295,11 @@
             const participantRotation = getRandomRotation();
             const participantCount = participantRotation.length;
             let rotationPointer = 0;
-            getTasks().forEach((task, index, tasks) => {
+            const tasks = getTasks();
+            // this mitigates uneven distribution when there are fewer participants than tasks and some are not always available
+            // TODO: implement a proper fix instead of this mitigation
+            const tasksForPicking = tasks.length > participantCount ? shuffleArray(tasks) : tasks;
+            tasksForPicking.forEach((task, index, tasks) => {
                 // skip participants that are not available for this task
                 const skip = countUnavailable(participantRotation, rotationPointer, task);
                 rotationPointer += skip;
@@ -337,8 +362,8 @@
         test = function() {
             const participationCount = {};
             const countByTask = {};
-            const iterations = 20000;
-            for (var i = 0; i <= iterations; i++) {
+            const iterations = 10000;
+            for (var i = 0; i < iterations; i++) {
                 const tasks = selectParticipants();
                 tasks.forEach(task => {
                     participationCount[task.participant] = participationCount[task.participant] ?? 0;
@@ -351,7 +376,7 @@
             }
             console.log(Object.entries(participationCount).map(([participant, timesParticipated]) => ({
                 participant,
-                percentage: (timesParticipated / iterations) * 100
+                selectedPercentage: (timesParticipated / iterations) * 100
             })));
             console.log('Count by task', countByTask);
         }
