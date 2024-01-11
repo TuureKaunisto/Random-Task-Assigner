@@ -183,6 +183,16 @@
             addInput(document.querySelector('#participants'), '', 'Name of participant');
         }
 
+        function updateUrlHash() {
+            const tasks = getTasks();
+            location.hash = getParticipants().map(participant => {
+                const name = encodeURIComponent(participant.name)
+                const availabilityBitmask = tasks.map(task => getAvailability(task.id, participant.id) ? '1' : '0').join('');
+                const availabilityAsHex = availabilityBitmask.includes('0') ? parseInt(availabilityBitmask, 2).toString(16) : '';
+                return `${name}${availabilityAsHex ? ';' : ''}${availabilityAsHex}`;
+            }).join('/');
+        }
+
         function addInput(parent, value = '', placeholder = '', isTask = false) {
             const newInput = document.createElement('input');
             newInput.type = 'text';
@@ -211,13 +221,21 @@
             return newInput;
         }
 
-        function getTasks() {
-            return [...document.querySelectorAll('#tasks input')]
-                .filter(taskInput => taskInput.value)
-                .map(taskInput => ({
-                    id: taskInput.dataset.id,
-                    name: taskInput.value
+        function getInputs(selector) {
+            return [...document.querySelectorAll(selector)]
+                .filter(input => Boolean(input.value))
+                .map(input => ({
+                    id: input.dataset.id,
+                    name: input.value
                 }));
+        }
+
+        function getTasks() {
+            return getInputs('#tasks input');
+        }
+
+        function getParticipants() {
+            return getInputs('#participants input');
         }
 
         function setAvailability(taskId, participantId, isAvailable) {
@@ -272,47 +290,47 @@
         }
 
         function getRandomRotation() {
-            const participantIds = [...document.querySelectorAll('#participants input')]
-                .filter(input => Boolean(input.value))
-                .map(input => input.dataset.id);
-            return shuffleArray(participantIds);
+            return shuffleArray(
+                getParticipants()
+                .map(participant => participant.id)
+            );
         }
 
-        function countUnavailable(participantRotation, rotationPointer, task) {
-            let skip = 0;
-            const participantCount = participantRotation.length;
-            for (skip = 0; skip < participantCount; skip++) {
-                const participantId = participantRotation[(rotationPointer + skip) % participantCount];
-                if (getAvailability(task.id, participantId)) {
-                    return skip;
+        function shiftNextParticipant(participantRotation) {
+            if (participantRotation.length === 0) {
+                participantRotation.push(...getRandomRotation());
+            }
+            return participantRotation.shift();
+        }
+
+        function getNextAvailable(participantRotation, task, previousSelection) {
+            const participantCount = getParticipants().length;
+            for (i = 0; i < participantCount + 1; i++) {
+                const participantId = shiftNextParticipant(participantRotation);
+                if (participantId !== previousSelection && getAvailability(task.id, participantId)) {
+                    return participantId;
                 }
             }
-            return 0;
+            return null;
         }
 
         function selectParticipants() {
+            updateUrlHash();
             const results = [];
-            const participantRotation = getRandomRotation();
-            const participantCount = participantRotation.length;
-            let rotationPointer = 0;
-            const tasks = getTasks();
-            // this mitigates uneven distribution when there are fewer participants than tasks and some are not always available
-            // TODO: implement a proper fix instead of this mitigation
-            const tasksForPicking = tasks.length > participantCount ? shuffleArray(tasks) : tasks;
-            tasksForPicking.forEach((task, index, tasks) => {
-                // skip participants that are not available for this task
-                const skip = countUnavailable(participantRotation, rotationPointer, task);
-                rotationPointer += skip;
-                let selectedParticipantId = participantRotation[rotationPointer % participantCount];
+            const participantRotation = [];
+            let previousSelection = null;
+            getTasks().forEach((task, index, tasks) => {
+                let selectedParticipantId = getNextAvailable(participantRotation, task, previousSelection);
+
                 if (!getAvailability(task.id, selectedParticipantId)) {
                     selectedParticipantId = null;
                 }
-                rotationPointer++;
 
                 results.push({
                     task: task.name,
                     participant: getParticipantName(selectedParticipantId)
                 });
+                previousSelection = selectedParticipantId;
             });
             return results;
         }
