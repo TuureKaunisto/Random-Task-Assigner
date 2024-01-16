@@ -8,11 +8,17 @@
         :root {
             --main-bg-color: #1c1c1c;
             --field-bg-color: #3c3c3c;
+            --text-color: white;
+
+            /* light mode
+            --main-bg-color: #f6f6f6;
+            --field-bg-color: #cecece;
+            --text-color: #141414; */
         }
         * {
             box-sizing: border-box;
             font-family: Helvetica, Arial, sans-serif;
-            color: white;
+            color: var(--text-color);
         }
         body {
             background: var(--main-bg-color);
@@ -90,14 +96,14 @@
             padding: 10px;
         }
         input::placeholder, textarea::placeholder {
-            color: white;
+            color: var(--text-color);
             opacity: 0.6;
         }
 
         button {
             border-radius: 4px;
             border: none;
-            color: white;
+            color: var(--text-color);
             text-shadow: none;
             background: var(--field-bg-color);
             cursor: pointer;
@@ -221,7 +227,7 @@
             newInput.value = value;
             newInput.placeholder = placeholder;
             newInput.dataset.id = crypto.randomUUID();
-            newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent, placeholder));
+            newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent, placeholder, isTask));
 
             const newElement = document.createElement('div');
             newElement.className = 'input-element';
@@ -296,10 +302,10 @@
             dialog.showModal();
         }
 
-        function ensureEmptyInputAtTheEnd(parent, placeholder) {
+        function ensureEmptyInputAtTheEnd(parent, placeholder, isTask = false) {
             const lastInput = parent.querySelector('div:last-of-type > input');
             if (lastInput.value.length > 0) {
-                addInput(parent, '' , placeholder);
+                addInput(parent, '' , placeholder, isTask);
             }
         }
 
@@ -399,10 +405,9 @@
             }
         }
 
-        test = function() {
+        test = function(iterations = 10000) {
             const participationCount = {};
             const countByTask = {};
-            const iterations = 10000;
             for (var i = 0; i < iterations; i++) {
                 const tasks = selectParticipants();
                 tasks.forEach(task => {
