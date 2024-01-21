@@ -9,11 +9,13 @@
             --main-bg-color: #1c1c1c;
             --field-bg-color: #3c3c3c;
             --text-color: white;
-
-            /* light mode
-            --main-bg-color: #f6f6f6;
-            --field-bg-color: #cecece;
-            --text-color: #141414; */
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --main-bg-color: #f6f6f6;
+                --field-bg-color: #cecece;
+                --text-color: #141414;
+            }
         }
         * {
             box-sizing: border-box;
@@ -143,8 +145,12 @@
             <div class="right-column">
                 <h2>Tasks</h2>
                 <div class="input-list" id="tasks"></div>
-                <button id="select-participants" class="btn main">Select random participants</button>
             </div>
+        </div>
+        <div>
+            <p class="text-center">
+                <button id="select-participants" class="btn main">Select random participants</button>
+            </p>
         </div>
 
         <section>
@@ -310,11 +316,12 @@
         }
 
         function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
+            const shuffledArray = [...array];
+            for (let i = shuffledArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+                [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
             }
-            return array;
+            return shuffledArray;
         }
 
         function getRandomRotation() {
@@ -331,11 +338,11 @@
             return participantRotation.shift();
         }
 
-        function getNextAvailable(participantRotation, task, previousSelection) {
+        function getNextAvailable(participantRotation, task) {
             const participantCount = getParticipants().length;
             for (i = 0; i < participantCount + 1; i++) {
                 const participantId = shiftNextParticipant(participantRotation);
-                if (participantId !== previousSelection && getAvailability(task.id, participantId)) {
+                if (getAvailability(task.id, participantId)) {
                     return participantId;
                 }
             }
@@ -344,28 +351,22 @@
 
         function selectParticipants() {
             updateUrlHash();
-            const results = [];
+            const results = {};
             const participantRotation = [];
-            let previousSelection = null;
-            getTasks().forEach((task, index, tasks) => {
-                let selectedParticipantId = getNextAvailable(participantRotation, task, previousSelection);
-
+            shuffleArray(getTasks()).forEach((task, index) => {
+                let selectedParticipantId = getNextAvailable(participantRotation, task);
                 if (!getAvailability(task.id, selectedParticipantId)) {
                     selectedParticipantId = null;
                 }
 
-                results.push({
-                    task: task.name,
-                    participant: getParticipantName(selectedParticipantId)
-                });
-                previousSelection = selectedParticipantId;
+                results[task.name] = selectedParticipantId;
             });
             return results;
         }
 
         function displaySelectedParticipants(results) {
-            document.querySelector('#result-text').value = results
-                .map(result => `${result.task}: @${result.participant}`)
+            document.querySelector('#result-text').value = getTasks()
+                .map(task => `${task.name}: ${results[task.name] ? '@' : ''}${getParticipantName(results[task.name])}`)
                 .join('\n');
         }
 
@@ -409,21 +410,27 @@
             const participationCount = {};
             const countByTask = {};
             for (var i = 0; i < iterations; i++) {
-                const tasks = selectParticipants();
-                tasks.forEach(task => {
-                    participationCount[task.participant] = participationCount[task.participant] ?? 0;
-                    participationCount[task.participant]++;
+                const tasks = Object.entries(selectParticipants());
+                tasks.forEach(([task, participantId]) => {
+                    participationCount[participantId] = participationCount[participantId] ?? 0;
+                    participationCount[participantId]++;
 
-                    countByTask[task.task] = countByTask[task.task] ?? {};
-                    countByTask[task.task][task.participant] = countByTask[task.task][task.participant] ?? 0;
-                    countByTask[task.task][task.participant]++;
+                    countByTask[task] = countByTask[task] ?? {};
+                    countByTask[task][participantId] = countByTask[task][participantId] ?? 0;
+                    countByTask[task][participantId]++;
                 })
             }
-            console.log(Object.entries(participationCount).map(([participant, timesParticipated]) => ({
-                participant,
+            console.log(Object.entries(participationCount).map(([participantId, timesParticipated]) => ({
+                participant: getParticipantName(participantId),
                 selectedPercentage: (timesParticipated / iterations) * 100
             })));
-            console.log('Count by task', countByTask);
+            console.log('Count by task', Object.entries(countByTask).map(([task, participantCounts]) => ({
+                task,
+                participantCounts: Object.entries(participantCounts).map(([participantId, count]) => ({
+                    participant: getParticipantName(participantId),
+                    count
+                }))
+            })));
         }
 
         addEventListener('DOMContentLoaded', domLoaded);
