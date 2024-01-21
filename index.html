@@ -154,8 +154,7 @@
         </div>
 
         <section>
-            <p>Results:</p>
-            <textarea id="result-text" placeholder="Results in text format" rows="6"></textarea>
+            <textarea id="result-text" placeholder="Results" rows="6"></textarea>
         </section>
     </main>
 
@@ -365,7 +364,10 @@
         }
 
         function displaySelectedParticipants(results) {
-            document.querySelector('#result-text').value = getTasks()
+            const resultElement = document.querySelector('#result-text')
+            const tasks = getTasks();
+            resultElement.rows = tasks.length + 1;
+            resultElement.value = tasks
                 .map(task => `${task.name}: ${results[task.name] ? '@' : ''}${getParticipantName(results[task.name])}`)
                 .join('\n');
         }
