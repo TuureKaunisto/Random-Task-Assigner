@@ -25,6 +25,7 @@
         }
         body {
             background: var(--main-bg-color);
+            margin: 15px;
         }
 
         h1 {
@@ -102,6 +103,9 @@
             color: var(--text-color);
             opacity: 0.6;
         }
+        textarea {
+            resize: vertical;
+        }
 
         button {
             border-radius: 4px;
@@ -113,6 +117,9 @@
             font-size: 0.95rem;
         }
 
+        button, .btn {
+            user-select: none;
+        }
         .btn.main {
             background: #005681;
             color: white;
