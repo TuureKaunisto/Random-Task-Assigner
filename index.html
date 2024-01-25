@@ -171,7 +171,6 @@
     <script>
         var test;
         (() => {
-        const storageKey = 'configuration';
         const available = {};
         function domLoaded() {
             setInitialTasks();
@@ -190,18 +189,33 @@
         }
 
         function setInitialTasks() {
-            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
-                .forEach(day => addInput(document.querySelector('#tasks'), day, 'Name of task', true));
+            const [, urlTaskString] = location.hash.replace(/^#/, '').split('//');
+            const taskPlaceholder = 'Task name';
+            if (urlTaskString) {
+                const urlTasks = urlTaskString.split('/');
+
+                [...urlTasks, ''].forEach(urlTask => {
+                    const newInput = addInput(document.querySelector('#tasks'), '', taskPlaceholder, true);
+                    // assign task in an XSS safe manner ( https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html#guideline-3-use-documentcreateelement-elementsetattributevalue-elementappendchild-and-similar-to-build-dynamic-interfaces )
+                    newInput.value = decodeURIComponent(urlTask);
+                })
+            } else {
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
+                    .forEach(day => addInput(document.querySelector('#tasks'), day, taskPlaceholder, true));
+            }
         }
 
         function setInitialParticipants() {
+            const participantPlaceholder = 'Participant name';
+
             if (location.hash) {
-                const urlParticipants = location.hash.replace(/^#/, '').split('/');
+                const [urlParticipantString] = location.hash.replace(/^#/, '').split('//');
+                const urlParticipants = urlParticipantString.split('/');
                 const tasks = getTasks();
 
-                urlParticipants.forEach(urlParticipant => {
+                [...urlParticipants, ''].forEach(urlParticipant => {
                     const [urlName, availabilityAsHex] = urlParticipant.split(';');
-                    const newInput = addInput(document.querySelector('#participants'));
+                    const newInput = addInput(document.querySelector('#participants'), '', participantPlaceholder);
                     // assign name in an XSS safe manner ( https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html#guideline-3-use-documentcreateelement-elementsetattributevalue-elementappendchild-and-similar-to-build-dynamic-interfaces )
                     newInput.value = decodeURIComponent(urlName);
                     if (availabilityAsHex) {
@@ -210,20 +224,21 @@
                     }
                 });
             } else {
-                ['Alice', 'Bob', 'Carol', 'Dan', 'Erin', 'Frank']
-                    .forEach(name => addInput(document.querySelector('#participants'), name));
+                ['Alice', 'Bob', 'Carol', 'Dan', 'Erin', 'Frank', '']
+                    .forEach(name => addInput(document.querySelector('#participants'), name, participantPlaceholder));
             }
-            addInput(document.querySelector('#participants'), '', 'Name of participant');
         }
 
         function updateUrlHash() {
             const tasks = getTasks();
-            location.hash = getParticipants().map(participant => {
+            const participantsForHash = getParticipants().map(participant => {
                 const name = encodeURIComponent(participant.name)
                 const availabilityBitmask = tasks.map(task => getAvailability(task.id, participant.id) ? '1' : '0').join('');
                 const availabilityAsHex = availabilityBitmask.includes('0') ? parseInt(availabilityBitmask, 2).toString(16) : '';
                 return `${name}${availabilityAsHex ? ';' : ''}${availabilityAsHex}`;
             }).join('/');
+            const tasksForHash = tasks.map(task => encodeURIComponent(task.name)).join('/');
+            location.hash = `${participantsForHash}//${tasksForHash}`;
         }
 
         function addInput(parent, value = '', placeholder = '', isTask = false) {
@@ -370,42 +385,6 @@
             resultElement.value = tasks
                 .map(task => `${task.name}: ${results[task.name] ? '@' : ''}${getParticipantName(results[task.name])}`)
                 .join('\n');
-        }
-
-        function getAvailabilityConfig(participantId) {
-            return [...document.querySelectorAll('#tasks input')]
-                .slice(0, -1)
-                .map((taskInput, index) => getAvailability(taskInput.dataset.id, participantId) ? null : index)
-                .filter(notAvailableIndex => notAvailableIndex !== null);
-        }
-
-        function getConfiguration() {
-            const tasks = [...document.querySelectorAll('#tasks input')]
-                .slice(0, -1)
-                .map(taskInput => taskInput.value);
-            const participants = [...document.querySelectorAll('#participants input')]
-                .slice(0, -1)
-                .map(input => [input.value, ...getAvailabilityConfig(input.dataset.id)]);
-            return {
-                p: participants,
-                t: tasks
-            }
-        }
-
-        function saveConfigurationToLocalStorage() {
-            try {
-                window.localStorage.setItem(storageKey, JSON.stringify(getConfiguration()));
-            } catch (error) {
-                console.error(error);
-            }
-        }
-
-        function loadConfiguration() {
-            try {
-                window.localStorage.gettItem(storageKey);
-            } catch (error) {
-                console.error(error);
-            }
         }
 
         test = function(iterations = 10000) {
