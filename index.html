@@ -7,7 +7,7 @@
     <style>
         :root {
             --main-bg-color: #1c1c1c;
-            --field-bg-color: #3c3c3c;
+            --field-bg-color: #313131;
             --text-color: white;
         }
         @media (prefers-color-scheme: light) {
@@ -21,6 +21,7 @@
             box-sizing: border-box;
             font-family: Helvetica, Arial, sans-serif;
             color: var(--text-color);
+            letter-spacing: .02rem;
         }
         body {
             background: var(--main-bg-color);
@@ -122,6 +123,15 @@
             text-align: center;
             cursor: pointer;
         }
+        .remove::after {
+            content: '+';
+            display: inline-block;
+            transform: rotate(45deg);
+            font-weight: bold;
+            font-size: 1.1rem;
+            line-height: 0.8rem;
+            margin-left: 2px;
+        }
 
         #result-text {
             width: 100%;
@@ -154,7 +164,7 @@
         </div>
 
         <section>
-            <textarea id="result-text" placeholder="Results" rows="6"></textarea>
+            <textarea id="result-text" placeholder="Results" aria-label="Results" rows="6"></textarea>
         </section>
     </main>
 
@@ -254,6 +264,7 @@
             newInput.type = 'text';
             newInput.value = value;
             newInput.placeholder = placeholder;
+            newInput.ariaLabel = placeholder;
             newInput.dataset.id = crypto.randomUUID();
             newInput.addEventListener('input', ensureEmptyInputAtTheEnd.bind(null, parent, placeholder, isTask));
 
@@ -262,17 +273,20 @@
 
             const availabilityButton = document.createElement('button');
             availabilityButton.textContent = 'Settings';
+            availabilityButton.ariaLabel = 'Settings'
             availabilityButton.addEventListener('click', () => showAvailabilityFor(newInput));
 
-            const closeButton = document.createElement('button');
-            closeButton.textContent = 'x';
-            closeButton.addEventListener('click', () => newElement.remove());
+            const removeButton = document.createElement('button');
+            removeButton.className = 'remove';
+            removeButton.ariaLabel = 'Remove';
+            removeButton.title = 'Remove';
+            removeButton.addEventListener('click', () => newElement.remove());
 
             newElement.appendChild(newInput);
             if (!isTask) {
                 newElement.appendChild(availabilityButton);
             }
-            newElement.appendChild(closeButton);
+            newElement.appendChild(removeButton);
             parent.appendChild(newElement);
             return newInput;
         }
