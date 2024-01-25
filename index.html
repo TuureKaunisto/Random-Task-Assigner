@@ -188,16 +188,26 @@
             });
         }
 
-        function setInitialTasks() {
-            const [, urlTaskString] = location.hash.replace(/^#/, '').split('//');
-            const taskPlaceholder = 'Task name';
-            if (urlTaskString) {
-                const urlTasks = urlTaskString.split('/');
+        function setInputValueFromUrl(input, value) {
+            // assign task in an XSS safe manner ( https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html#guideline-3-use-documentcreateelement-elementsetattributevalue-elementappendchild-and-similar-to-build-dynamic-interfaces )
+            input.value = decodeURIComponent(value);
+        }
 
+        function getUrlHashValues() {
+            const [urlParticipantString, urlTaskString] = location.hash.replace(/^#/, '').split('//');
+            return [
+                urlParticipantString ? urlParticipantString?.split('/') : undefined,
+                urlTaskString?.split('/')
+            ]
+        }
+
+        function setInitialTasks() {
+            const [, urlTasks] = getUrlHashValues();
+            const taskPlaceholder = 'Task name';
+            if (urlTasks) {
                 [...urlTasks, ''].forEach(urlTask => {
                     const newInput = addInput(document.querySelector('#tasks'), '', taskPlaceholder, true);
-                    // assign task in an XSS safe manner ( https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html#guideline-3-use-documentcreateelement-elementsetattributevalue-elementappendchild-and-similar-to-build-dynamic-interfaces )
-                    newInput.value = decodeURIComponent(urlTask);
+                    setInputValueFromUrl(newInput, urlTask)
                 })
             } else {
                 ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '']
@@ -206,18 +216,16 @@
         }
 
         function setInitialParticipants() {
+            const [urlParticipants] = getUrlHashValues();
             const participantPlaceholder = 'Participant name';
 
-            if (location.hash) {
-                const [urlParticipantString] = location.hash.replace(/^#/, '').split('//');
-                const urlParticipants = urlParticipantString.split('/');
+            if (urlParticipants) {
                 const tasks = getTasks();
 
                 [...urlParticipants, ''].forEach(urlParticipant => {
                     const [urlName, availabilityAsHex] = urlParticipant.split(';');
                     const newInput = addInput(document.querySelector('#participants'), '', participantPlaceholder);
-                    // assign name in an XSS safe manner ( https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html#guideline-3-use-documentcreateelement-elementsetattributevalue-elementappendchild-and-similar-to-build-dynamic-interfaces )
-                    newInput.value = decodeURIComponent(urlName);
+                    setInputValueFromUrl(newInput, urlName)
                     if (availabilityAsHex) {
                         const bitmask = parseInt(availabilityAsHex, 16).toString(2).padStart(tasks.length, '0');
                         tasks.forEach((task, index) => setAvailability(task.id, newInput.dataset.id, bitmask[index] !== '0'));
