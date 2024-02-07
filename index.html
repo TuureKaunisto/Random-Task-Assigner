@@ -9,12 +9,14 @@
             --main-bg-color: #1c1c1c;
             --field-bg-color: #313131;
             --text-color: white;
+            --text-color-faint: rgba(255,255,255,0.5);
         }
         @media (prefers-color-scheme: light) {
             :root {
                 --main-bg-color: #f6f6f6;
                 --field-bg-color: #cecece;
                 --text-color: #141414;
+                --text-color-faint: rgba(20,20,20,0.5);
             }
         }
         * {
@@ -32,7 +34,7 @@
             text-align: center;
         }
 
-        @media (min-width: 500px) {
+        @media (min-width: 600px) {
             main {
                 max-width: 800px;
                 margin: auto;
@@ -58,7 +60,7 @@
             margin-bottom: 10px;
             column-gap: 3px;
         }
-        .input-element:last-child button {
+        .input-element:last-child :not(input) {
             display: none;
         }
 
@@ -71,7 +73,7 @@
         dialog::backdrop {
             background: rgba(0,0,0,0.7);
         }
-        #availability-dialog {
+        #settings-dialog {
             padding: 0;
         }
         .dialog-content {
@@ -107,7 +109,7 @@
             resize: vertical;
         }
 
-        button {
+        button, .availability {
             border-radius: 4px;
             border: none;
             color: var(--text-color);
@@ -115,6 +117,17 @@
             background: var(--field-bg-color);
             cursor: pointer;
             font-size: 0.95rem;
+            padding: 1px 10px;
+        }
+
+        .availability {
+            line-height: 32px;
+            margin-left: -5px;
+            border-left: 1px solid rgba(0,0,0,0.3);
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            color: var(--text-color-faint);
+            cursor: default;
         }
 
         button, .btn {
@@ -175,12 +188,12 @@
         </section>
     </main>
 
-    <dialog id="availability-dialog">
+    <dialog id="settings-dialog">
         <div class="dialog-content">
             <h3>Availability for <span id="availability-participant"></span></h3>
             <div id="availability-tasks"></div>
             <p class="text-center">
-                <button id="close-availability" class="btn main">Close</button>
+                <button id="close-settings" class="btn main">Close</button>
             </p>
         </div>
     </dialog>
@@ -193,11 +206,11 @@
             setInitialTasks();
             setInitialParticipants();
 
-            const availabilityDialog = document.querySelector('#availability-dialog');
-            document.querySelector('#close-availability').addEventListener('click', () => availabilityDialog.close());
-            document.querySelector('#availability-dialog').addEventListener('click', event => {
-                if (event.target === availabilityDialog) {
-                    availabilityDialog.close();
+            const settingsDialog = document.querySelector('#settings-dialog');
+            document.querySelector('#close-settings').addEventListener('click', () => settingsDialog.close());
+            settingsDialog.addEventListener('click', event => {
+                if (event.target === settingsDialog) {
+                    settingsDialog.close();
                 }
             });
             document.querySelector('#select-participants').addEventListener('click', () => {
@@ -278,24 +291,36 @@
             const newElement = document.createElement('div');
             newElement.className = 'input-element';
 
-            const availabilityButton = document.createElement('button');
-            availabilityButton.textContent = 'Settings';
-            availabilityButton.ariaLabel = 'Settings'
-            availabilityButton.addEventListener('click', () => showAvailabilityFor(newInput));
-
             const removeButton = document.createElement('button');
             removeButton.className = 'remove';
             removeButton.ariaLabel = 'Remove';
             removeButton.title = 'Remove';
-            removeButton.addEventListener('click', () => newElement.remove());
+            removeButton.addEventListener('click', () => removeInput(newElement));
 
             newElement.appendChild(newInput);
             if (!isTask) {
-                newElement.appendChild(availabilityButton);
+                const availabilityIndicator = document.createElement('span');
+                availabilityIndicator.title = 'Availability'
+                availabilityIndicator.ariaLabel = 'Availability'
+                availabilityIndicator.className = 'availability';
+
+                const settingsButton = document.createElement('button');
+                settingsButton.textContent = 'Settings';
+                settingsButton.className = 'settings';
+                settingsButton.addEventListener('click', () => showSettingsFor(newInput));
+
+                newElement.appendChild(availabilityIndicator);
+                newElement.appendChild(settingsButton);
             }
             newElement.appendChild(removeButton);
             parent.appendChild(newElement);
+            updateAvailability();
             return newInput;
+        }
+
+        function removeInput(element) {
+            element?.remove();
+            updateAvailability();
         }
 
         function getInputs(selector) {
@@ -303,7 +328,8 @@
                 .filter(input => Boolean(input.value))
                 .map(input => ({
                     id: input.dataset.id,
-                    name: input.value
+                    name: input.value,
+                    element: input
                 }));
         }
 
@@ -318,19 +344,36 @@
         function setAvailability(taskId, participantId, isAvailable) {
             available[taskId] = available[taskId] ?? {};
             available[taskId][participantId] = isAvailable;
+            updateAvailability();
         }
 
         function getAvailability(taskId, participantId) {
             return available?.[taskId]?.[participantId] !== false;
         }
 
+        function getAvailabilityCount(participantId) {
+            return getTasks().reduce((accumulator, task) =>
+                getAvailability(task.id, participantId) ? accumulator + 1 : accumulator
+            , 0);
+        }
+
+        function updateAvailability() {
+            const participants = getParticipants();
+            participants.forEach(participant => {
+                const availabilityIndicator = participant.element?.parentElement?.querySelector('.availability');
+                if (availabilityIndicator) {
+                    availabilityIndicator.textContent = getAvailabilityCount(participant.id);
+                }
+            })
+        }
+
         function getParticipantName(participantId) {
             return document.querySelector(`#participants input[data-id="${participantId}"]`)?.value ?? 'Not found';
         }
 
-        function showAvailabilityFor(participantInput) {
+        function showSettingsFor(participantInput) {
             const participant = participantInput.value;
-            const dialog = document.querySelector('#availability-dialog');
+            const dialog = document.querySelector('#settings-dialog');
             document.querySelector('#availability-participant').textContent = participant;
             const taskContainer = document.querySelector('#availability-tasks');
             taskContainer.replaceChildren();
