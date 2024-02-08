@@ -27,11 +27,15 @@
         }
         body {
             background: var(--main-bg-color);
-            margin: 15px;
+            margin: 20px;
         }
 
         h1 {
             text-align: center;
+        }
+
+        .left-column, .right-column {
+            margin-top: 20px;
         }
 
         @media (min-width: 600px) {
@@ -48,6 +52,10 @@
             }
         }
 
+        .input-title {
+            margin: 0;
+        }
+
         .input-list {
             width: 100%;
         }
@@ -57,7 +65,7 @@
         }
         .input-element {
             display: flex;
-            margin-bottom: 10px;
+            margin-top: 7px;
             column-gap: 3px;
         }
         .input-element:last-child :not(input) {
@@ -99,7 +107,7 @@
             border-radius: 4px;
             border: none;
             background: var(--field-bg-color);
-            padding: 10px;
+            padding: 13px;
         }
         input::placeholder, textarea::placeholder {
             color: var(--text-color);
@@ -117,11 +125,11 @@
             background: var(--field-bg-color);
             cursor: pointer;
             font-size: 0.95rem;
-            padding: 1px 10px;
+            padding: 1px 13px;
         }
 
         .availability {
-            line-height: 32px;
+            line-height: 39px;
             margin-left: -5px;
             border-left: 1px solid rgba(0,0,0,0.3);
             border-top-left-radius: 0;
@@ -160,6 +168,10 @@
         .text-center {
             text-align: center;
         }
+        .medium-margin {
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
     </style>
   </head>
   <body>
@@ -169,16 +181,16 @@
     <main>
         <div class="row">
             <div class="left-column">
-                <h2>Participants</h2>
+                <h2 class="input-title">Participants</h2>
                 <div class="input-list" id="participants"></div>
             </div>
             <div class="right-column">
-                <h2>Tasks</h2>
+                <h2 class="input-title">Tasks</h2>
                 <div class="input-list" id="tasks"></div>
             </div>
         </div>
         <div>
-            <p class="text-center">
+            <p class="text-center medium-margin">
                 <button id="select-participants" class="btn main">Select random participants</button>
             </p>
         </div>
