@@ -1,0 +1,167 @@
+:root {
+    --main-bg-color: #1c1c1c;
+    --field-bg-color: #313131;
+    --text-color: white;
+    --text-color-faint: rgba(255,255,255,0.5);
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --main-bg-color: #f6f6f6;
+        --field-bg-color: #cecece;
+        --text-color: #141414;
+        --text-color-faint: rgba(20,20,20,0.5);
+    }
+}
+* {
+    box-sizing: border-box;
+    font-family: Helvetica, Arial, sans-serif;
+    color: var(--text-color);
+    letter-spacing: .02rem;
+}
+body {
+    background: var(--main-bg-color);
+    margin: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.left-column, .right-column {
+    margin-top: 20px;
+}
+
+@media (min-width: 600px) {
+    main {
+        max-width: 800px;
+        margin: auto;
+    }
+    .row {
+        display: flex;
+        column-gap: 20px;
+    }
+    .left-column, .right-column {
+        width: 50%;
+    }
+}
+
+.input-title {
+    margin: 0;
+}
+
+.input-list {
+    width: 100%;
+}
+.input-list input {
+    width: 100%;
+    padding: 6px 6px;
+}
+.input-element {
+    display: flex;
+    margin-top: 7px;
+    column-gap: 3px;
+}
+.input-element:last-child :not(input) {
+    display: none;
+}
+
+dialog {
+    background: var(--field-bg-color);
+    border: none;
+    border-radius: 4px;
+    max-width: 550px;
+}
+dialog::backdrop {
+    background: rgba(0,0,0,0.7);
+}
+#settings-dialog {
+    padding: 0;
+}
+.dialog-content {
+    padding: 20px;
+}
+.dialog-content h3 {
+    margin-top: 5px;
+}
+.dialog-content p {
+    margin-bottom: 0;
+}
+#availability-tasks {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+}
+#availability-tasks input {
+    margin-right: 7px;
+}
+
+input[type=text], textarea {
+    border-radius: 4px;
+    border: none;
+    background: var(--field-bg-color);
+    padding: 13px;
+}
+input::placeholder, textarea::placeholder {
+    color: var(--text-color);
+    opacity: 0.6;
+}
+textarea {
+    resize: vertical;
+}
+
+button, .availability {
+    border-radius: 4px;
+    border: none;
+    color: var(--text-color);
+    text-shadow: none;
+    background: var(--field-bg-color);
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 1px 13px;
+}
+
+.availability {
+    line-height: 39px;
+    margin-left: -5px;
+    border-left: 1px solid rgba(0,0,0,0.3);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    color: var(--text-color-faint);
+    cursor: default;
+}
+
+button, .btn {
+    user-select: none;
+}
+.btn.main {
+    background: #005681;
+    color: white;
+    border: 0;
+    border-radius: 25px;
+    padding: 15px 10px;
+    min-width: 230px;
+    text-align: center;
+    cursor: pointer;
+}
+.remove::after {
+    content: '+';
+    display: inline-block;
+    transform: rotate(45deg);
+    font-weight: bold;
+    font-size: 1.1rem;
+    line-height: 0.8rem;
+    margin-left: 2px;
+}
+
+#result-text {
+    width: 100%;
+}
+
+.text-center {
+    text-align: center;
+}
+.medium-margin {
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
